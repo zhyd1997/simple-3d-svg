@@ -8,7 +8,7 @@ function fmt(n: number, precision: number = 0) {
     return Math.round(n) + ""
   }
   const factor = Math.pow(10, precision)
-  return (Math.round(n * factor) / factor) + ""
+  return Math.round(n * factor) / factor + ""
 }
 
 export async function renderScene(
@@ -31,7 +31,7 @@ export async function renderScene(
         | "xz"
     }
   } = {},
-): Promise<string>{
+): Promise<string> {
   const {
     width: W,
     height: H,
@@ -104,7 +104,11 @@ export async function renderScene(
         const strokeAttr = f.stroke ? "" : ' stroke="none"'
         out.push(
           `    <polygon fill="${f.fill}"${strokeAttr} points="${f.pts
-            .map((p) => coordinatePrecision > 0 ? `${fmt(p.x, coordinatePrecision)},${fmt(p.y, coordinatePrecision)}` : `${fmt(p.x)},${fmt(p.y)}`)
+            .map((p) =>
+              coordinatePrecision > 0
+                ? `${fmt(p.x, coordinatePrecision)},${fmt(p.y, coordinatePrecision)}`
+                : `${fmt(p.x)},${fmt(p.y)}`,
+            )
             .join(" ")}" />\n`,
         )
       } else {
@@ -132,7 +136,11 @@ export async function renderScene(
       const e = element.data
       out.push(
         `  <polyline fill="none" stroke="${e.color}" points="${e.pts
-          .map((p) => coordinatePrecision > 0 ? `${fmt(p.x, coordinatePrecision)},${fmt(p.y, coordinatePrecision)}` : `${p.x},${p.y}`)
+          .map((p) =>
+            coordinatePrecision > 0
+              ? `${fmt(p.x, coordinatePrecision)},${fmt(p.y, coordinatePrecision)}`
+              : `${p.x},${p.y}`,
+          )
           .join(" ")}" />\n`,
       )
     }
