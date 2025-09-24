@@ -3,8 +3,12 @@ import { colorToCss } from "./color"
 import { buildRenderElements } from "./render-elements"
 import { sub, cross, dot, len, norm, add, scale } from "./vec3"
 
-function fmt(n: number) {
-  return Math.round(n) + ""
+function fmt(n: number, precision: number = 0) {
+  if (precision === 0) {
+    return Math.round(n) + ""
+  }
+  const factor = Math.pow(10, precision)
+  return (Math.round(n * factor) / factor) + ""
 }
 
 export async function renderScene(
@@ -16,6 +20,9 @@ export async function renderScene(
     showAxes?: boolean
     showOrigin?: boolean
     showGrid?: boolean
+    optimizePerformance?: boolean
+    coordinatePrecision?: number
+    maxSubdivision?: number
     grid?: {
       /** world-space grid cell size (default = 1)            */ cellSize?: number
       /** plane on which to draw the grid (default = "xz")   */ plane?:
@@ -24,7 +31,7 @@ export async function renderScene(
         | "xz"
     }
   } = {},
-): Promise<string> {
+): Promise<string>{
   const {
     width: W,
     height: H,
@@ -36,6 +43,9 @@ export async function renderScene(
     width: opt.width,
     height: opt.height,
     backgroundColor: opt.backgroundColor,
+    optimizePerformance: opt.optimizePerformance,
+    coordinatePrecision: opt.coordinatePrecision,
+    maxSubdivision: opt.maxSubdivision,
   })
 
   const out: string[] = []
@@ -77,6 +87,7 @@ export async function renderScene(
 
   // ---- element rendering loop ----
   let inStrokeGroup = false
+  const coordinatePrecision = opt.coordinatePrecision ?? 0
 
   for (const element of elements) {
     if (element.type === "face" || element.type === "image") {
@@ -93,7 +104,7 @@ export async function renderScene(
         const strokeAttr = f.stroke ? "" : ' stroke="none"'
         out.push(
           `    <polygon fill="${f.fill}"${strokeAttr} points="${f.pts
-            .map((p) => `${fmt(p.x)},${fmt(p.y)}`)
+            .map((p) => `${fmt(p.x, coordinatePrecision)},${fmt(p.y, coordinatePrecision)}`)
             .join(" ")}" />\n`,
         )
       } else {
@@ -121,7 +132,7 @@ export async function renderScene(
       const e = element.data
       out.push(
         `  <polyline fill="none" stroke="${e.color}" points="${e.pts
-          .map((p) => `${p.x},${p.y}`)
+          .map((p) => `${fmt(p.x, coordinatePrecision)},${fmt(p.y, coordinatePrecision)}`)
           .join(" ")}" />\n`,
       )
     }

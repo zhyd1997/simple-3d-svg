@@ -8,11 +8,16 @@ import { scaleAndPositionMesh } from "./mesh"
 import { FACES, EDGES, TOP, verts } from "./geometry"
 import { affineMatrix } from "./affine"
 
-function fmt(n: number): string {
-  return Math.round(n).toString()
+function fmt(n: number, precision: number = 0): string {
+  if (precision === 0) {
+    return Math.round(n).toString()
+  }
+  const factor = Math.pow(10, precision)
+  return (Math.round(n * factor) / factor).toString()
 }
-function fmtPrecise(n: number): string {
-  return (Math.round(n * 100) / 100).toString()
+function fmtPrecise(n: number, precision: number = 2): string {
+  const factor = Math.pow(10, precision)
+  return (Math.round(n * factor) / factor).toString()
 }
 
 /*────────────── Camera & Projection ─────────────*/
@@ -67,7 +72,14 @@ type RenderElement =
 
 export async function buildRenderElements(
   scene: Scene,
-  opt: { width?: number; height?: number; backgroundColor?: Color } = {},
+  opt: { 
+    width?: number
+    height?: number
+    backgroundColor?: Color
+    optimizePerformance?: boolean
+    coordinatePrecision?: number
+    maxSubdivision?: number
+  } = {},
 ): Promise<{
   width: number
   height: number
@@ -75,10 +87,12 @@ export async function buildRenderElements(
   elements: RenderElement[]
   images: Img[]
   texId: Map<string, string>
-}> {
+}>{
   const W = opt.width ?? W_DEF
   const H = opt.height ?? H_DEF
   const focal = scene.camera.focalLength ?? FOCAL
+  const coordinatePrecision = opt.coordinatePrecision ?? 0
+  const maxSubdivision = opt.maxSubdivision
   const faces: Face[] = []
   const images: Img[] = []
   // Map each BSP-sorted Face if it actually represents an <image> triangle
@@ -300,7 +314,25 @@ export async function buildRenderElements(
           const sym = texId.get(href)!
 
           // Subdivide the face into projectionSubdivision x projectionSubdivision grid
-          const subdivisions = box.projectionSubdivision ?? 2
+          let subdivisions = box.projectionSubdivision ?? 2
+          
+          if (opt.optimizePerformance && maxSubdivision !== undefined) {
+            subdivisions = Math.min(subdivisions, maxSubdivision)
+            
+            const boxCenter = box.center
+            const camPos = scene.camera.position
+            const distance = Math.sqrt(
+              Math.pow(boxCenter.x - camPos.x, 2) +
+              Math.pow(boxCenter.y - camPos.y, 2) +
+              Math.pow(boxCenter.z - camPos.z, 2)
+            )
+            
+            if (distance > 50) {
+              subdivisions = Math.max(1, Math.floor(subdivisions / 2))
+            } else if (distance > 100) {
+              subdivisions = 1
+            }
+          }
           const quadsPerSide = subdivisions
           for (let row = 0; row < quadsPerSide; row++) {
             for (let col = 0; col < quadsPerSide; col++) {
@@ -354,7 +386,7 @@ export async function buildRenderElements(
                 depth: cz,
                 href,
                 clip: id0,
-                points: `${fmtPrecise(u0)},${fmtPrecise(v0)} ${fmtPrecise(u1)},${fmtPrecise(v0)} ${fmtPrecise(u1)},${fmtPrecise(v1)}`,
+                points: `${fmtPrecise(u0, coordinatePrecision)},${fmtPrecise(v0, coordinatePrecision)} ${fmtPrecise(u1, coordinatePrecision)},${fmtPrecise(v0, coordinatePrecision)} ${fmtPrecise(u1, coordinatePrecision)},${fmtPrecise(v1, coordinatePrecision)}`,
                 sym,
               })
               // After pushing img for first triangle (p00,p10,p11)
@@ -382,7 +414,7 @@ export async function buildRenderElements(
                 depth: cz,
                 href,
                 clip: id1,
-                points: `${fmtPrecise(u0)},${fmtPrecise(v0)} ${fmtPrecise(u1)},${fmtPrecise(v1)} ${fmtPrecise(u0)},${fmtPrecise(v1)}`,
+                points: `${fmtPrecise(u0, coordinatePrecision)},${fmtPrecise(v0, coordinatePrecision)} ${fmtPrecise(u1, coordinatePrecision)},${fmtPrecise(v1, coordinatePrecision)} ${fmtPrecise(u0, coordinatePrecision)},${fmtPrecise(v1, coordinatePrecision)}`,
                 sym,
               })
               // After pushing img for second triangle (p00,p11,p01)
@@ -433,6 +465,46 @@ export async function buildRenderElements(
     }
   }
 
+  function mergeCoplanarFaces(faces: Face[]): Face[] {
+    if (!opt.optimizePerformance) return faces
+    
+    const merged: Face[] = []
+    const processed = new Set<number>()
+    
+    for (let i = 0; i < faces.length; i++) {
+      if (processed.has(i)) continue
+      
+      const face = faces[i]!
+      const candidates = [face]
+      processed.add(i)
+      
+      for (let j = i + 1; j < faces.length; j++) {
+        if (processed.has(j)) continue
+        
+        const other = faces[j]!
+        if (face.fill === other.fill && areCoplanar(face, other)) {
+          candidates.push(other)
+          processed.add(j)
+        }
+      }
+      
+      merged.push(...candidates)
+    }
+    
+    return merged
+  }
+  
+  function areCoplanar(face1: Face, face2: Face): boolean {
+    const EPS = 1e-6
+    const n1 = cross(sub(face1.cam[1]!, face1.cam[0]!), sub(face1.cam[2]!, face1.cam[0]!))
+    const n2 = cross(sub(face2.cam[1]!, face2.cam[0]!), sub(face2.cam[2]!, face2.cam[0]!))
+    
+    const cross_product = cross(n1, n2)
+    const cross_magnitude = Math.sqrt(cross_product.x * cross_product.x + cross_product.y * cross_product.y + cross_product.z * cross_product.z)
+    
+    return cross_magnitude < EPS
+  }
+
   // BSP sort faces before merging with other elements
   function sortFacesBSP(
     polys: Face[],
@@ -476,6 +548,14 @@ export async function buildRenderElements(
         } else if (!pos) back.push(f)
         else if (!neg) front.push(f)
         else {
+          if (opt.optimizePerformance) {
+            const area = calculatePolygonArea(f.pts)
+            if (area < 100) { // Skip splitting small polygons (< 100 square pixels)
+              front.push(f)
+              continue
+            }
+          }
+          
           // split polygon by plane
           const fFrontCam: Point3[] = []
           const fBackCam: Point3[] = []
@@ -559,8 +639,21 @@ export async function buildRenderElements(
     traverse(root, ordered)
     return ordered
   }
+  
+  function calculatePolygonArea(pts: Proj[]): number {
+    if (pts.length < 3) return 0
+    
+    let area = 0
+    for (let i = 0; i < pts.length; i++) {
+      const j = (i + 1) % pts.length
+      area += pts[i]!.x * pts[j]!.y
+      area -= pts[j]!.x * pts[i]!.y
+    }
+    return Math.abs(area) / 2
+  }
 
-  const orderedFaces = sortFacesBSP(faces, W, H, focal)
+  const mergedFaces = mergeCoplanarFaces(faces)
+  const orderedFaces = sortFacesBSP(mergedFaces, W, H, focal)
 
   const elements: RenderElement[] = []
   for (const f of orderedFaces) {
