@@ -104,7 +104,7 @@ export async function renderScene(
         const strokeAttr = f.stroke ? "" : ' stroke="none"'
         out.push(
           `    <polygon fill="${f.fill}"${strokeAttr} points="${f.pts
-            .map((p) => `${fmt(p.x, coordinatePrecision)},${fmt(p.y, coordinatePrecision)}`)
+            .map((p) => coordinatePrecision > 0 ? `${fmt(p.x, coordinatePrecision)},${fmt(p.y, coordinatePrecision)}` : `${fmt(p.x)},${fmt(p.y)}`)
             .join(" ")}" />\n`,
         )
       } else {
@@ -132,7 +132,7 @@ export async function renderScene(
       const e = element.data
       out.push(
         `  <polyline fill="none" stroke="${e.color}" points="${e.pts
-          .map((p) => `${fmt(p.x, coordinatePrecision)},${fmt(p.y, coordinatePrecision)}`)
+          .map((p) => coordinatePrecision > 0 ? `${fmt(p.x, coordinatePrecision)},${fmt(p.y, coordinatePrecision)}` : `${p.x},${p.y}`)
           .join(" ")}" />\n`,
       )
     }

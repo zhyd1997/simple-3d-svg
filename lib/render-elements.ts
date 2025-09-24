@@ -386,7 +386,7 @@ export async function buildRenderElements(
                 depth: cz,
                 href,
                 clip: id0,
-                points: `${fmtPrecise(u0, coordinatePrecision)},${fmtPrecise(v0, coordinatePrecision)} ${fmtPrecise(u1, coordinatePrecision)},${fmtPrecise(v0, coordinatePrecision)} ${fmtPrecise(u1, coordinatePrecision)},${fmtPrecise(v1, coordinatePrecision)}`,
+                points: coordinatePrecision > 0 ? `${fmtPrecise(u0, coordinatePrecision)},${fmtPrecise(v0, coordinatePrecision)} ${fmtPrecise(u1, coordinatePrecision)},${fmtPrecise(v0, coordinatePrecision)} ${fmtPrecise(u1, coordinatePrecision)},${fmtPrecise(v1, coordinatePrecision)}` : `${fmtPrecise(u0)},${fmtPrecise(v0)} ${fmtPrecise(u1)},${fmtPrecise(v0)} ${fmtPrecise(u1)},${fmtPrecise(v1)}`,
                 sym,
               })
               // After pushing img for first triangle (p00,p10,p11)
@@ -414,7 +414,7 @@ export async function buildRenderElements(
                 depth: cz,
                 href,
                 clip: id1,
-                points: `${fmtPrecise(u0, coordinatePrecision)},${fmtPrecise(v0, coordinatePrecision)} ${fmtPrecise(u1, coordinatePrecision)},${fmtPrecise(v1, coordinatePrecision)} ${fmtPrecise(u0, coordinatePrecision)},${fmtPrecise(v1, coordinatePrecision)}`,
+                points: coordinatePrecision > 0 ? `${fmtPrecise(u0, coordinatePrecision)},${fmtPrecise(v0, coordinatePrecision)} ${fmtPrecise(u1, coordinatePrecision)},${fmtPrecise(v1, coordinatePrecision)} ${fmtPrecise(u0, coordinatePrecision)},${fmtPrecise(v1, coordinatePrecision)}` : `${fmtPrecise(u0)},${fmtPrecise(v0)} ${fmtPrecise(u1)},${fmtPrecise(v1)} ${fmtPrecise(u0)},${fmtPrecise(v1)}`,
                 sym,
               })
               // After pushing img for second triangle (p00,p11,p01)
