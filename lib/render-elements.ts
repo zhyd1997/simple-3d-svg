@@ -12,7 +12,7 @@ function fmt(n: number): string {
   return Math.round(n).toString()
 }
 function fmtPrecise(n: number): string {
-  return (Math.round(n * 10) / 10).toString()
+  return (Math.round(n * 100) / 100).toString()
 }
 
 /*────────────── Camera & Projection ─────────────*/
@@ -300,7 +300,7 @@ export async function buildRenderElements(
           const sym = texId.get(href)!
 
           // Subdivide the face into projectionSubdivision x projectionSubdivision grid
-          const subdivisions = box.projectionSubdivision ?? 3
+          const subdivisions = box.projectionSubdivision ?? 5
           const quadsPerSide = subdivisions
           for (let row = 0; row < quadsPerSide; row++) {
             for (let col = 0; col < quadsPerSide; col++) {
