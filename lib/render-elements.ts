@@ -12,7 +12,7 @@ function fmt(n: number): string {
   return Math.round(n).toString()
 }
 function fmtPrecise(n: number): string {
-  return (Math.round(n * 100) / 100).toString()
+  return (Math.round(n * 10) / 10).toString()
 }
 
 /*────────────── Camera & Projection ─────────────*/
@@ -300,7 +300,7 @@ export async function buildRenderElements(
           const sym = texId.get(href)!
 
           // Subdivide the face into projectionSubdivision x projectionSubdivision grid
-          const subdivisions = box.projectionSubdivision ?? 2
+          const subdivisions = box.projectionSubdivision ?? 3
           const quadsPerSide = subdivisions
           for (let row = 0; row < quadsPerSide; row++) {
             for (let col = 0; col < quadsPerSide; col++) {
@@ -433,6 +433,24 @@ export async function buildRenderElements(
     }
   }
 
+  function sortFacesByDepth(polys: Face[]): Face[] {
+    return polys.sort((a, b) => {
+      const avgDepthA = a.cam.reduce((sum, p) => sum + p.z, 0) / a.cam.length
+      const avgDepthB = b.cam.reduce((sum, p) => sum + p.z, 0) / b.cam.length
+      return avgDepthB - avgDepthA // far to near
+    })
+  }
+
+  function needsBSPSorting(polys: Face[]): boolean {
+    if (polys.length < 50) return false // BSP overhead not worth it for small scenes
+    const depths = polys.map(f => f.cam.reduce((sum, p) => sum + p.z, 0) / f.cam.length)
+    const minDepth = Math.min(...depths)
+    const maxDepth = Math.max(...depths)
+    const depthRange = maxDepth - minDepth
+    const avgDepth = depths.reduce((sum, d) => sum + d, 0) / depths.length
+    return depthRange > avgDepth * 0.5 // Use BSP if depth range is significant
+  }
+
   // BSP sort faces before merging with other elements
   function sortFacesBSP(
     polys: Face[],
@@ -560,7 +578,7 @@ export async function buildRenderElements(
     return ordered
   }
 
-  const orderedFaces = sortFacesBSP(faces, W, H, focal)
+  const orderedFaces = needsBSPSorting(faces) ? sortFacesBSP(faces, W, H, focal) : sortFacesByDepth(faces)
 
   const elements: RenderElement[] = []
   for (const f of orderedFaces) {
