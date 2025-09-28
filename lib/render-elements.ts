@@ -67,7 +67,16 @@ type RenderElement =
 
 export async function buildRenderElements(
   scene: Scene,
-  opt: { width?: number; height?: number; backgroundColor?: Color } = {},
+  opt: {
+    width?: number
+    height?: number
+    backgroundColor?: Color
+    performanceMode?: boolean
+    maxSubdivision?: number
+    showAxes?: boolean
+    showGrid?: boolean
+    showOrigin?: boolean
+  } = {},
 ): Promise<{
   width: number
   height: number
@@ -87,6 +96,11 @@ export async function buildRenderElements(
   const edges: Edge[] = []
   let clipSeq = 0
   const texId = new Map<string, string>()
+
+  const vertexCache = new Map<
+    string,
+    { cam: Point3[]; proj: (Proj | null)[] }
+  >()
 
   // Load STL meshes for boxes that have stlUrl
   const stlMeshes = new Map<string, STLMesh>()
@@ -120,9 +134,19 @@ export async function buildRenderElements(
   }
 
   for (const box of scene.boxes) {
-    const bw = verts(box)
-    const bc = bw.map((v) => toCam(v, scene.camera))
-    const bp = bc.map((v) => proj(v, W, H, focal))
+    const cacheKey = `${box.center.x},${box.center.y},${box.center.z},${box.size.x},${box.size.y},${box.size.z},${JSON.stringify(box.rotation || {})}`
+
+    let bw, bc, bp
+    if (vertexCache.has(cacheKey)) {
+      const cached = vertexCache.get(cacheKey)!
+      bc = cached.cam
+      bp = cached.proj
+    } else {
+      bw = verts(box)
+      bc = bw.map((v) => toCam(v, scene.camera))
+      bp = bc.map((v) => proj(v, W, H, focal))
+      vertexCache.set(cacheKey, { cam: bc, proj: bp })
+    }
 
     if (box.drawBoundingBox) {
       for (const [a, b] of EDGES) {
@@ -300,7 +324,11 @@ export async function buildRenderElements(
           const sym = texId.get(href)!
 
           // Subdivide the face into projectionSubdivision x projectionSubdivision grid
-          const subdivisions = box.projectionSubdivision ?? 2
+          const maxAllowedSubdivision = opt.maxSubdivision ?? 10
+          const subdivisions = Math.min(
+            box.projectionSubdivision ?? 2,
+            maxAllowedSubdivision,
+          )
           const quadsPerSide = subdivisions
           for (let row = 0; row < quadsPerSide; row++) {
             for (let col = 0; col < quadsPerSide; col++) {
@@ -433,13 +461,25 @@ export async function buildRenderElements(
     }
   }
 
+  function sortFacesDepthBased(faces: Face[]): Face[] {
+    return faces.sort((a, b) => {
+      const avgZA = a.cam.reduce((sum, p) => sum + p.z, 0) / a.cam.length
+      const avgZB = b.cam.reduce((sum, p) => sum + p.z, 0) / b.cam.length
+      return avgZB - avgZA
+    })
+  }
+
   // BSP sort faces before merging with other elements
   function sortFacesBSP(
     polys: Face[],
     W: number,
     H: number,
     focal: number,
+    useSimpleDepthSort = false,
   ): Face[] {
+    if (useSimpleDepthSort) {
+      return sortFacesDepthBased(polys)
+    }
     const EPS = 1e-6
     type Node = {
       face: Face
@@ -560,7 +600,7 @@ export async function buildRenderElements(
     return ordered
   }
 
-  const orderedFaces = sortFacesBSP(faces, W, H, focal)
+  const orderedFaces = sortFacesBSP(faces, W, H, focal, opt.performanceMode)
 
   const elements: RenderElement[] = []
   for (const f of orderedFaces) {

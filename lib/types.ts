@@ -67,3 +67,18 @@ export interface STLMesh {
     max: Point3
   }
 }
+
+export interface RenderOptions {
+  width?: number
+  height?: number
+  backgroundColor?: Color
+  showAxes?: boolean
+  showGrid?: boolean
+  showOrigin?: boolean
+  performanceMode?: boolean
+  maxSubdivision?: number
+  grid?: {
+    cellSize?: number
+    plane?: "xy" | "yz" | "xz"
+  }
+}
