@@ -2,7 +2,7 @@ import type { Scene, Color, Camera, Point3 } from "./types"
 import { colorToCss } from "./color"
 import { buildRenderElements } from "./render-elements"
 import { sub, cross, dot, len, norm, add, scale } from "./vec3"
-import { optimize } from "svgo"
+import { optimize } from "svgo/browser"
 
 function fmt(n: number) {
   return Math.round(n) + ""
