@@ -57,7 +57,7 @@ test("Binary STL rendering with bear clip and additional boxes", async () => {
   })
   expect(svg).toContain("<svg")
   expect(svg).toContain("</svg>")
-  expect(svg).toContain("polygon")
+  expect(svg).toContain("path")
 
   await expect(svg).toMatchSvgSnapshot(import.meta.path)
 })

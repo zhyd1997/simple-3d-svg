@@ -22,7 +22,7 @@ test("OBJ rendering from remote url", async () => {
   const svg = await renderScene(scene)
   expect(svg).toContain("<svg")
   expect(svg).toContain("</svg>")
-  expect(svg).toContain("polygon")
+  expect(svg).toContain("path")
 
   await expect(svg).toMatchSvgSnapshot(import.meta.path)
 })
