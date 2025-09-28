@@ -72,6 +72,7 @@ export async function buildRenderElements(
     height?: number
     backgroundColor?: Color
     maxSubdivision?: number
+    useHybridSorting?: boolean
     showAxes?: boolean
     showGrid?: boolean
     showOrigin?: boolean
@@ -95,11 +96,6 @@ export async function buildRenderElements(
   const edges: Edge[] = []
   let clipSeq = 0
   const texId = new Map<string, string>()
-
-  const vertexCache = new Map<
-    string,
-    { cam: Point3[]; proj: (Proj | null)[] }
-  >()
 
   // Load STL meshes for boxes that have stlUrl
   const stlMeshes = new Map<string, STLMesh>()
@@ -133,19 +129,9 @@ export async function buildRenderElements(
   }
 
   for (const box of scene.boxes) {
-    const cacheKey = `${box.center.x},${box.center.y},${box.center.z},${box.size.x},${box.size.y},${box.size.z},${JSON.stringify(box.rotation || {})}`
-
-    let bw, bc, bp
-    if (vertexCache.has(cacheKey)) {
-      const cached = vertexCache.get(cacheKey)!
-      bc = cached.cam
-      bp = cached.proj
-    } else {
-      bw = verts(box)
-      bc = bw.map((v) => toCam(v, scene.camera))
-      bp = bc.map((v) => proj(v, W, H, focal))
-      vertexCache.set(cacheKey, { cam: bc, proj: bp })
-    }
+    const bw = verts(box)
+    const bc = bw.map((v) => toCam(v, scene.camera))
+    const bp = bc.map((v) => proj(v, W, H, focal))
 
     if (box.drawBoundingBox) {
       for (const [a, b] of EDGES) {
@@ -468,15 +454,58 @@ export async function buildRenderElements(
     })
   }
 
+  function calculateFaceBoundingBox(vertices: Point3[]): {
+    min: Point3
+    max: Point3
+  } {
+    let min = { x: Infinity, y: Infinity, z: Infinity }
+    let max = { x: -Infinity, y: -Infinity, z: -Infinity }
+
+    for (const v of vertices) {
+      if (v.x < min.x) min.x = v.x
+      if (v.y < min.y) min.y = v.y
+      if (v.z < min.z) min.z = v.z
+      if (v.x > max.x) max.x = v.x
+      if (v.y > max.y) max.y = v.y
+      if (v.z > max.z) max.z = v.z
+    }
+
+    return { min, max }
+  }
+
+  function detectIntersectingFaces(faces: Face[]): boolean {
+    for (let i = 0; i < faces.length; i++) {
+      for (let j = i + 1; j < faces.length; j++) {
+        const faceA = faces[i]!
+        const faceB = faces[j]!
+
+        const bboxA = calculateFaceBoundingBox(faceA.cam)
+        const bboxB = calculateFaceBoundingBox(faceB.cam)
+
+        if (
+          bboxA.max.x >= bboxB.min.x &&
+          bboxA.min.x <= bboxB.max.x &&
+          bboxA.max.y >= bboxB.min.y &&
+          bboxA.min.y <= bboxB.max.y &&
+          bboxA.max.z >= bboxB.min.z &&
+          bboxA.min.z <= bboxB.max.z
+        ) {
+          return true
+        }
+      }
+    }
+    return false
+  }
+
   // BSP sort faces before merging with other elements
   function sortFacesBSP(
     polys: Face[],
     W: number,
     H: number,
     focal: number,
-    useSimpleDepthSort = false,
+    useHybridSorting = true,
   ): Face[] {
-    if (useSimpleDepthSort) {
+    if (useHybridSorting && !detectIntersectingFaces(polys)) {
       return sortFacesDepthBased(polys)
     }
     const EPS = 1e-6
@@ -599,7 +628,13 @@ export async function buildRenderElements(
     return ordered
   }
 
-  const orderedFaces = sortFacesBSP(faces, W, H, focal, true)
+  const orderedFaces = sortFacesBSP(
+    faces,
+    W,
+    H,
+    focal,
+    opt.useHybridSorting ?? true,
+  )
 
   const elements: RenderElement[] = []
   for (const f of orderedFaces) {

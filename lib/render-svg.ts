@@ -23,6 +23,7 @@ export async function renderScene(
     height: opt.height,
     backgroundColor: opt.backgroundColor,
     maxSubdivision: opt.maxSubdivision,
+    useHybridSorting: opt.useHybridSorting,
     showAxes: opt.showAxes,
     showGrid: opt.showGrid,
     showOrigin: opt.showOrigin,

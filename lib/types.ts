@@ -76,6 +76,7 @@ export interface RenderOptions {
   showGrid?: boolean
   showOrigin?: boolean
   maxSubdivision?: number
+  useHybridSorting?: boolean
   grid?: {
     cellSize?: number
     plane?: "xy" | "yz" | "xz"
