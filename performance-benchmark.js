@@ -21,14 +21,13 @@ async function benchmarkPerformance() {
     console.log(`    ${time.toFixed(2)}ms`)
   }
 
-  console.log("\n⚡ Performance Mode:")
+  console.log("\n⚡ Optimized Rendering (with maxSubdivision=4):")
   const perfTimes = []
   for (let i = 0; i < iterations; i++) {
     console.log(`  Run ${i + 1}...`)
     const start = performance.now()
     await renderScene(repro3, {
       backgroundColor: "gray",
-      performanceMode: true,
       maxSubdivision: 4,
     })
     const end = performance.now()
@@ -42,19 +41,14 @@ async function benchmarkPerformance() {
   const improvement = ((avgDefault - avgPerf) / avgDefault) * 100
 
   console.log(`\n📈 Results:`)
-  console.log(`  Default Average: ${avgDefault.toFixed(2)}ms`)
-  console.log(`  Performance Mode Average: ${avgPerf.toFixed(2)}ms`)
-  console.log(`  Speed Improvement: ${improvement.toFixed(1)}%`)
+  console.log(`  Default (maxSubdivision=4): ${avgDefault.toFixed(2)}ms`)
+  console.log(`  With explicit maxSubdivision=4: ${avgPerf.toFixed(2)}ms`)
+  console.log(`  Difference: ${Math.abs(improvement).toFixed(1)}%`)
 
-  if (improvement > 0) {
-    console.log(
-      `  🎯 Performance mode is ${(avgDefault / avgPerf).toFixed(1)}x faster!`,
-    )
-  } else {
-    console.log(
-      `  ⚠️  Performance mode shows ${Math.abs(improvement).toFixed(1)}% slower (may vary by scene complexity)`,
-    )
-  }
+  console.log(`\n🎯 Optimizations are now default! All rendering uses:`)
+  console.log(`  ✅ Depth-based sorting (instead of BSP)`)
+  console.log(`  ✅ Vertex transformation caching`)
+  console.log(`  ✅ maxSubdivision=4 default (down from 10)`)
 
   console.log(`\n🔧 Simple Scene Test:`)
   const simpleScene = {

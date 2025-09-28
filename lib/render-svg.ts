@@ -22,7 +22,6 @@ export async function renderScene(
     width: opt.width,
     height: opt.height,
     backgroundColor: opt.backgroundColor,
-    performanceMode: opt.performanceMode,
     maxSubdivision: opt.maxSubdivision,
     showAxes: opt.showAxes,
     showGrid: opt.showGrid,

@@ -75,7 +75,6 @@ export interface RenderOptions {
   showAxes?: boolean
   showGrid?: boolean
   showOrigin?: boolean
-  performanceMode?: boolean
   maxSubdivision?: number
   grid?: {
     cellSize?: number

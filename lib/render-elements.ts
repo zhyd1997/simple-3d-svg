@@ -71,7 +71,6 @@ export async function buildRenderElements(
     width?: number
     height?: number
     backgroundColor?: Color
-    performanceMode?: boolean
     maxSubdivision?: number
     showAxes?: boolean
     showGrid?: boolean
@@ -600,7 +599,7 @@ export async function buildRenderElements(
     return ordered
   }
 
-  const orderedFaces = sortFacesBSP(faces, W, H, focal, opt.performanceMode ?? true)
+  const orderedFaces = sortFacesBSP(faces, W, H, focal, true)
 
   const elements: RenderElement[] = []
   for (const f of orderedFaces) {
