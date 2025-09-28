@@ -324,7 +324,7 @@ export async function buildRenderElements(
           const sym = texId.get(href)!
 
           // Subdivide the face into projectionSubdivision x projectionSubdivision grid
-          const maxAllowedSubdivision = opt.maxSubdivision ?? 10
+          const maxAllowedSubdivision = opt.maxSubdivision ?? 4
           const subdivisions = Math.min(
             box.projectionSubdivision ?? 2,
             maxAllowedSubdivision,
@@ -600,7 +600,7 @@ export async function buildRenderElements(
     return ordered
   }
 
-  const orderedFaces = sortFacesBSP(faces, W, H, focal, opt.performanceMode)
+  const orderedFaces = sortFacesBSP(faces, W, H, focal, opt.performanceMode ?? true)
 
   const elements: RenderElement[] = []
   for (const f of orderedFaces) {
